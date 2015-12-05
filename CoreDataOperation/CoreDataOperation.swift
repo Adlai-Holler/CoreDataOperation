@@ -10,15 +10,15 @@ func Log(message: String) {
     }
 }
 
-public enum CoreDataUpdateOperationSaveDepth: Int {
+public enum CoreDataOperationSaveDepth: Int {
     case OnlyScratchContext = 0
     case ScratchAndTargetContext = 1
     case ToPersistentStore = 100
 }
 
-public final class CoreDataUpdateOperation<Result>: NSOperation {
+public final class CoreDataOperation<Result>: NSOperation {
 
-    public let saveDepth: CoreDataUpdateOperationSaveDepth
+    public let saveDepth: CoreDataOperationSaveDepth
     public let obtainPermanentObjectIDs: Bool
 
     internal var body: ((NSManagedObjectContext) throws -> Result)?
@@ -55,23 +55,23 @@ public final class CoreDataUpdateOperation<Result>: NSOperation {
     internal var _executing = Atomic(false)
 
     /**
-    * Initialize a new operation.
-    * Parameter targetContext: The managed object context to update. The operation
-    * will create a "scratch context" as a child of this context, and the work will be
-    * done in there.
-    * Note: The operation does not retain this context. If it is deallocated
-    * before the operation begins, the operation will cancel itself.
-    * Parameter obtainPermanentObjectIDs: Should this operation attempt to obtain
-    * permanent object IDs for objects inserted during the operation body? The default
-    * value is `true`.
-    * Parameter saveDepth: How far up the hierarchy of managed object contexts should this operation
-    * save? The default value is `.ScratchAndTargetContext`.
-    * Parameter body: The work to be done. The managed object context passed into this block
-    * will be a private child context, owned by this operation, of the `targetContext`.
-    * Note: You must work with objects in the provided context.
-    */
-    public
-    init(targetContext: NSManagedObjectContext, obtainPermanentObjectIDs: Bool = true, saveDepth: CoreDataUpdateOperationSaveDepth = .ScratchAndTargetContext, body: (NSManagedObjectContext) throws -> Result) {
+     * Initialize a new operation.
+
+     * - Parameter targetContext: The managed object context to update. The operation
+     * will create a "scratch context" as a child of this context, and the work will be
+     * done in there.
+     * Note: The operation does not retain this context. If it is deallocated
+     * before the operation begins, the operation will cancel itself.
+     * Parameter obtainPermanentObjectIDs: Should this operation attempt to obtain
+     * permanent object IDs for objects inserted during the operation body? The default
+     * value is `true`.
+     * Parameter saveDepth: How far up the hierarchy of managed object contexts should this operation
+     * save? The default value is `.ScratchAndTargetContext`.
+     * Parameter body: The work to be done. The managed object context passed into this block
+     * will be a private child context, owned by this operation, of the `targetContext`.
+     * Note: You must work with objects in the provided context.
+     */
+    public init(targetContext: NSManagedObjectContext, obtainPermanentObjectIDs: Bool = true, saveDepth: CoreDataOperationSaveDepth = .ScratchAndTargetContext, body: (NSManagedObjectContext) throws -> Result) {
         self.saveDepth = saveDepth
         self.obtainPermanentObjectIDs = obtainPermanentObjectIDs
         self.body = body
@@ -128,8 +128,8 @@ public final class CoreDataUpdateOperation<Result>: NSOperation {
             Log("\(self) will save scratch context.")
             try context.save()
 
-            // Asynchronously save up the chain as needed. 
-            CoreDataUpdateOperation.saveUpTheChain(context.parentContext,
+            // Asynchronously save up the chain as needed.
+            CoreDataOperation.saveUpTheChain(context.parentContext,
                 maxDepth: saveDepth.rawValue,
                 canceled: { [weak self] in
                     self?.cancelled ?? true
@@ -144,18 +144,18 @@ public final class CoreDataUpdateOperation<Result>: NSOperation {
         }
 
     }
-    
+
     override public func cancel() {
         Log("\(self) cancelled.")
         self.error = NSError(domain: NSCocoaErrorDomain, code: NSUserCancelledError, userInfo: nil)
         super.cancel()
     }
-    
+
     internal func finishWithError(error: ErrorType?, result: Result?) {
         Log("\(self) did finish with error \(error), result \(result), ancestorError \(errorSavingAncestor).")
         self.result = result
         self.error = error
-        
+
         willChangeValueForKey("isFinished")
         _finished.value = true
         didChangeValueForKey("isFinished")
@@ -166,7 +166,7 @@ public final class CoreDataUpdateOperation<Result>: NSOperation {
     /// The completion block will always be executed on an arbitrary queue, so we don't hold the lock on any context during it.
     internal static func saveUpTheChain(context: NSManagedObjectContext?, maxDepth: Int, canceled: () -> Bool, completion: (ErrorType? -> Void)) {
         guard let context = context where maxDepth > 0 && !canceled() else {
-            Log("NewCoreDataUpdateOperation reached the end of save chain.")
+            Log("NewCoreDataOperation reached the end of save chain.")
             dispatch_async(dispatch_get_global_queue(QOS_CLASS_DEFAULT, 0)) {
                 completion(nil)
             }
@@ -177,12 +177,12 @@ public final class CoreDataUpdateOperation<Result>: NSOperation {
             guard !canceled() else { return }
 
             do {
-                Log("NewCoreDataUpdateOperation will save \(context)")
+                Log("NewCoreDataOperation will save \(context)")
                 try context.save()
 
                 saveUpTheChain(context.parentContext, maxDepth: maxDepth - 1, canceled: canceled, completion: completion)
             } catch let error {
-                Log("NewCoreDataUpdateOperation caught error: \(error)")
+                Log("NewCoreDataOperation caught error: \(error)")
                 dispatch_async(dispatch_get_global_queue(QOS_CLASS_DEFAULT, 0)) {
                     completion(error)
                 }

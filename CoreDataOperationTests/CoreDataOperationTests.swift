@@ -1,6 +1,6 @@
 //
-//  CoreDataUpdateOperationTests.swift
-//  CoreDataUpdateOperationTests
+//  CoreDataOperationTests.swift
+//  CoreDataOperationTests
 //
 //  Created by Adlai Holler on 12/4/15.
 //  Copyright © 2015 Adlai Holler. All rights reserved.
@@ -8,7 +8,7 @@
 
 import XCTest
 import CoreData
-@testable import CoreDataUpdateOperation
+@testable import CoreDataOperation
 
 private var store: NSPersistentStoreCoordinator!
 private var rootContext: NSManagedObjectContext!
@@ -25,7 +25,7 @@ private func allEmployees(context: NSManagedObjectContext) -> Set<Employee> {
     return Set(employees)
 }
 
-class CoreDataUpdateOperationTests: XCTestCase {
+class CoreDataOperationTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
@@ -58,7 +58,7 @@ class CoreDataUpdateOperationTests: XCTestCase {
             try! rootContext.save()
         }
     }
-    
+
     override func tearDown() {
         queue.cancelAllOperations()
         workingContext = nil
@@ -74,7 +74,7 @@ class CoreDataUpdateOperationTests: XCTestCase {
     }
 
     func testThatSuccessfulOperationSuceeds() {
-        let op = CoreDataUpdateOperation<String>(targetContext: workingContext) { ctx in
+        let op = CoreDataOperation<String>(targetContext: workingContext) { ctx in
             let e2 = NSEntityDescription.insertNewObjectForEntityForName("Employee", inManagedObjectContext: ctx) as! Employee
             e2.name = "Silent Bob"
             return "Example Result"
@@ -97,7 +97,7 @@ class CoreDataUpdateOperationTests: XCTestCase {
     }
 
     func testThatErrorSavingScratchContextIsReported() {
-        let op = CoreDataUpdateOperation<String>(targetContext: workingContext) { ctx in
+        let op = CoreDataOperation<String>(targetContext: workingContext) { ctx in
             NSEntityDescription.insertNewObjectForEntityForName("Employee", inManagedObjectContext: ctx) as! Employee
             return "Example Result You Won't See"
         }
@@ -114,7 +114,7 @@ class CoreDataUpdateOperationTests: XCTestCase {
 
     func testThatCancelledOperationIsCancelled() {
         let lock = NSLock()
-        let op = CoreDataUpdateOperation<String>(targetContext: workingContext) { ctx in
+        let op = CoreDataOperation<String>(targetContext: workingContext) { ctx in
             lock.lock()
             lock.unlock()
             let e2 = NSEntityDescription.insertNewObjectForEntityForName("Employee", inManagedObjectContext: ctx) as! Employee
@@ -142,7 +142,7 @@ class CoreDataUpdateOperationTests: XCTestCase {
     }
 
     func testThatOneDeepOperationOnlySavesOneDeep() {
-        let op = CoreDataUpdateOperation<String>(targetContext: workingContext, saveDepth: .OnlyScratchContext) { ctx in
+        let op = CoreDataOperation<String>(targetContext: workingContext, saveDepth: .OnlyScratchContext) { ctx in
             let e2 = NSEntityDescription.insertNewObjectForEntityForName("Employee", inManagedObjectContext: ctx) as! Employee
             e2.name = "Silent Bob"
             return "Example Result"
@@ -167,7 +167,7 @@ class CoreDataUpdateOperationTests: XCTestCase {
     }
 
     func testThatTwoDeepOperationOnlySavesTwoDeep() {
-        let op = CoreDataUpdateOperation<String>(targetContext: workingContext, saveDepth: .ScratchAndTargetContext) { ctx in
+        let op = CoreDataOperation<String>(targetContext: workingContext, saveDepth: .ScratchAndTargetContext) { ctx in
             let e2 = NSEntityDescription.insertNewObjectForEntityForName("Employee", inManagedObjectContext: ctx) as! Employee
             e2.name = "Silent Bob"
             return "Example Result"
@@ -192,7 +192,7 @@ class CoreDataUpdateOperationTests: XCTestCase {
     }
 
     func testThatAllTheWayOperationSavesAllTheWay() {
-        let op = CoreDataUpdateOperation<String>(targetContext: workingContext, saveDepth: .ToPersistentStore) { ctx in
+        let op = CoreDataOperation<String>(targetContext: workingContext, saveDepth: .ToPersistentStore) { ctx in
             let e2 = NSEntityDescription.insertNewObjectForEntityForName("Employee", inManagedObjectContext: ctx) as! Employee
             e2.name = "Silent Bob"
             return "Example Result"
@@ -221,7 +221,7 @@ class CoreDataUpdateOperationTests: XCTestCase {
             // Put an invalid employee into the working context so the save will fail.
             NSEntityDescription.insertNewObjectForEntityForName("Employee", inManagedObjectContext: workingContext) as! Employee
         }
-        let op = CoreDataUpdateOperation<String>(targetContext: workingContext, saveDepth: .ScratchAndTargetContext) { ctx in
+        let op = CoreDataOperation<String>(targetContext: workingContext, saveDepth: .ScratchAndTargetContext) { ctx in
             let e2 = NSEntityDescription.insertNewObjectForEntityForName("Employee", inManagedObjectContext: ctx) as! Employee
             e2.name = "Silent Bob"
             return "Example Result"
@@ -246,7 +246,7 @@ class CoreDataUpdateOperationTests: XCTestCase {
             // Put an invalid employee into the root context so the save will fail.
             NSEntityDescription.insertNewObjectForEntityForName("Employee", inManagedObjectContext: rootContext) as! Employee
         }
-        let op = CoreDataUpdateOperation<String>(targetContext: workingContext, saveDepth: .ToPersistentStore) { ctx in
+        let op = CoreDataOperation<String>(targetContext: workingContext, saveDepth: .ToPersistentStore) { ctx in
             let e2 = NSEntityDescription.insertNewObjectForEntityForName("Employee", inManagedObjectContext: ctx) as! Employee
             e2.name = "Silent Bob"
             return "Example Result"
@@ -271,7 +271,7 @@ class CoreDataUpdateOperationTests: XCTestCase {
     }
 
     func testThatErrorThrownFromBodyIsReported() {
-        let op = CoreDataUpdateOperation<String>(targetContext: workingContext) { ctx in
+        let op = CoreDataOperation<String>(targetContext: workingContext) { ctx in
             throw NSError(domain: NSCocoaErrorDomain, code: 1337, userInfo: nil)
         }
         let expectation = expectationWithDescription("Operation Completion")
@@ -287,12 +287,12 @@ class CoreDataUpdateOperationTests: XCTestCase {
 
     func testThatOperationIsCancelledIfTargetContextIsDeallocated() {
         weak var target: NSManagedObjectContext?
-        let op: CoreDataUpdateOperation<Void>
+        let op: CoreDataOperation<Void>
         do {
             let strongTarget = NSManagedObjectContext(concurrencyType: .PrivateQueueConcurrencyType)
             target = strongTarget
             strongTarget.parentContext = workingContext
-            op = CoreDataUpdateOperation(targetContext: target!) { ctx in
+            op = CoreDataOperation(targetContext: target!) { ctx in
                 XCTFail()
             }
         }
@@ -307,5 +307,5 @@ class CoreDataUpdateOperationTests: XCTestCase {
         XCTAssertEqual(op.error as? NSError, NSError(domain: NSCocoaErrorDomain, code: NSUserCancelledError, userInfo: nil))
         XCTAssertNil(op.errorSavingAncestor)
     }
-
+    
 }
