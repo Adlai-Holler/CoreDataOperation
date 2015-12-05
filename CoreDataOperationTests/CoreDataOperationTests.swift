@@ -121,24 +121,28 @@ class CoreDataOperationTests: XCTestCase {
             e2.name = "Silent Bob"
             return "Example Result"
         }
-        op.completionBlock = {
-            XCTFail()
+        let expectation = expectationWithDescription("Operation Completion")
+        op.completionBlock = { [unowned op] in
+            XCTAssert(!op.executing)
+            XCTAssert(op.finished)
+            XCTAssert(op.cancelled)
+            XCTAssertNil(op.result)
+            // FIXME: Why does using CoreDataOperation.canceledError cause the compiler to become a moron?
+            XCTAssertEqual(op.error as? NSError, NSError(domain: NSCocoaErrorDomain, code: NSUserCancelledError, userInfo: nil))
+            XCTAssertNil(op.errorSavingAncestor)
+            expectation.fulfill()
         }
         lock.lock()
         queue.addOperation(op)
         op.cancel()
         lock.unlock()
-        sleep(1)
-        XCTAssert(op.cancelled)
+        waitForExpectationsWithTimeout(1, handler: nil)
         workingContext.performBlockAndWait {
             XCTAssert(!allEmployees(workingContext).contains { $0.name == "Silent Bob" })
         }
         rootContext.performBlockAndWait {
             XCTAssert(!allEmployees(rootContext).contains { $0.name == "Silent Bob" })
         }
-        XCTAssertEqual(op.error as? NSError, NSError(domain: NSCocoaErrorDomain, code: NSUserCancelledError, userInfo: nil))
-        XCTAssertNil(op.errorSavingAncestor)
-        XCTAssertNil(op.result)
     }
 
     func testThatOneDeepOperationOnlySavesOneDeep() {
@@ -296,16 +300,19 @@ class CoreDataOperationTests: XCTestCase {
                 XCTFail()
             }
         }
-        XCTAssertNil(target)
-        op.completionBlock = {
-            XCTFail()
+        let expectation = expectationWithDescription("Operation Completion")
+        op.completionBlock = { [unowned op] in
+            XCTAssert(!op.executing)
+            XCTAssert(op.finished)
+            XCTAssert(op.cancelled)
+            XCTAssertNil(op.result)
+            XCTAssertEqual(op.error as? NSError, NSError(domain: NSCocoaErrorDomain, code: NSUserCancelledError, userInfo: nil))
+            XCTAssertNil(op.errorSavingAncestor)
+            expectation.fulfill()
         }
+        XCTAssertNil(target)
         queue.addOperation(op)
-        sleep(1)
-        XCTAssert(op.cancelled)
-        XCTAssertNil(op.result)
-        XCTAssertEqual(op.error as? NSError, NSError(domain: NSCocoaErrorDomain, code: NSUserCancelledError, userInfo: nil))
-        XCTAssertNil(op.errorSavingAncestor)
+        waitForExpectationsWithTimeout(1, handler: nil)
     }
 
     func testThatOperationStatesAreCorrectForSuccessCase() {
@@ -350,6 +357,39 @@ class CoreDataOperationTests: XCTestCase {
         }
         queue.addOperation(op)
         waitForExpectationsWithTimeout(1, handler: nil)
+    }
+
+    func testThatOperationStatesAreCorrectForCancelCase() {
+        let lock = NSLock()
+        let op = CoreDataOperation<String>(targetContext: workingContext) { ctx in
+            lock.lock()
+            lock.unlock()
+            let e2 = NSEntityDescription.insertNewObjectForEntityForName("Employee", inManagedObjectContext: ctx) as! Employee
+            e2.name = "Silent Bob"
+            return "Example Result"
+        }
+        let expectation = expectationWithDescription("Operation Completion")
+        op.completionBlock = { [unowned op] in
+            XCTAssert(!op.executing)
+            XCTAssert(op.finished)
+            XCTAssert(op.cancelled)
+            expectation.fulfill()
+        }
+        lock.lock()
+        queue.addOperation(op)
+        op.cancel()
+        lock.unlock()
+        waitForExpectationsWithTimeout(1, handler: nil)
+
+        workingContext.performBlockAndWait {
+            XCTAssert(!allEmployees(workingContext).contains { $0.name == "Silent Bob" })
+        }
+        rootContext.performBlockAndWait {
+            XCTAssert(!allEmployees(rootContext).contains { $0.name == "Silent Bob" })
+        }
+        XCTAssertEqual(op.error as? NSError, NSError(domain: NSCocoaErrorDomain, code: NSUserCancelledError, userInfo: nil))
+        XCTAssertNil(op.errorSavingAncestor)
+        XCTAssertNil(op.result)
     }
 
 }
