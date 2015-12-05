@@ -17,10 +17,10 @@ let likeOperation = CoreDataOperation<Int>(targetContext: myContext, saveDepth: 
     }
     if post.doILike {
         post.doILike = false
-        post.likeCount--
+        post.likeCount -= 1
     } else {
         post.doILike = true
-        post.likeCount++
+        post.likeCount += 1
     }
     post.updatedAt = NSDate()
     return post.likeCount
