@@ -3,6 +3,11 @@
 
 CoreDataOperation is a fast, safe, flexible operation for updating your core data models. It supports the latest Swift 2.1 syntax, and does all its work in a background managed object context.
 
+### Installation
+
+- Using [CocoaPods](https://cocoapods.org) by adding `pod CoreDataOperation` to your Podfile
+- Using [Carthage](https://github.com/Carthage/Carthage) by adding `github "Adlai-Holler/CoreDataOperation"` to your Cartfile.
+
 ### How to Use
 
 ```swift
