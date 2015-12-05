@@ -6,7 +6,7 @@ Pod::Spec.new do |s|
   s.homepage = 'https://github.com/Adlai-Holler/CoreDataOperation'
   s.social_media_url = 'http://twitter.com/adlaih'
   s.authors = { 'Adlai Holler' => 'him@adlai.io' }
-  s.source = { :git => 'https://github.com/Adlai-Holler/CoreDataOperation.git', :tag => s.version }
+  s.source = { :git => 'https://github.com/Adlai-Holler/CoreDataOperation.git', :tag => 'v1.0.0' }
 
   s.ios.deployment_target = '8.0'
   
