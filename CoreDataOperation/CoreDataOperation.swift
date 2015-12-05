@@ -78,6 +78,18 @@ public final class CoreDataOperation<Result>: NSOperation {
         self.targetContext = targetContext
     }
 
+    public func setCompletionHandlerWithSuccess(success: ((CoreDataOperation<Result>, Result) -> Void)? = nil, failure: ((CoreDataOperation<Result>, ErrorType) -> Void)? = nil) {
+        completionBlock = { [unowned self] in
+            if let result = self.result {
+                success?(self, result)
+            } else if let error = self.error {
+                failure?(self, error)
+            } else {
+                fatalError("\(self) completed with no result and no error.")
+            }
+        }
+    }
+
     override public var asynchronous: Bool {
         return true
     }
@@ -166,7 +178,7 @@ public final class CoreDataOperation<Result>: NSOperation {
     /// The completion block will always be executed on an arbitrary queue, so we don't hold the lock on any context during it.
     internal static func saveUpTheChain(context: NSManagedObjectContext?, maxDepth: Int, canceled: () -> Bool, completion: (ErrorType? -> Void)) {
         guard let context = context where maxDepth > 0 && !canceled() else {
-            Log("NewCoreDataOperation reached the end of save chain.")
+            Log("CoreDataOperation reached the end of save chain.")
             dispatch_async(dispatch_get_global_queue(QOS_CLASS_DEFAULT, 0)) {
                 completion(nil)
             }
@@ -177,12 +189,12 @@ public final class CoreDataOperation<Result>: NSOperation {
             guard !canceled() else { return }
 
             do {
-                Log("NewCoreDataOperation will save \(context)")
+                Log("CoreDataOperation will save \(context)")
                 try context.save()
 
                 saveUpTheChain(context.parentContext, maxDepth: maxDepth - 1, canceled: canceled, completion: completion)
             } catch let error {
-                Log("NewCoreDataOperation caught error: \(error)")
+                Log("CoreDataOperation caught error: \(error)")
                 dispatch_async(dispatch_get_global_queue(QOS_CLASS_DEFAULT, 0)) {
                     completion(error)
                 }
