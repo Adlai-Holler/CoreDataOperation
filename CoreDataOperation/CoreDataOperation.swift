@@ -21,6 +21,10 @@ public final class CoreDataOperation<Result>: NSOperation {
     public let saveDepth: CoreDataOperationSaveDepth
     public let obtainPermanentObjectIDs: Bool
 
+    static var canceledError: NSError {
+        return NSError(domain: NSCocoaErrorDomain, code: NSUserCancelledError, userInfo: nil)
+    }
+
     internal var body: ((NSManagedObjectContext) throws -> Result)?
 
     public internal(set) weak var targetContext: NSManagedObjectContext?
@@ -103,14 +107,15 @@ public final class CoreDataOperation<Result>: NSOperation {
     }
 
     override public func start() {
-        guard let targetContext = targetContext else {
-            cancel()
-            return
-        }
-
         willChangeValueForKey("isExecuting")
         _executing.value = true
         didChangeValueForKey("isExecuting")
+
+        guard let targetContext = targetContext else {
+            cancel()
+            finishWithError(CoreDataOperation.canceledError, result: nil)
+            return
+        }
 
         Log("Starting \(self)")
         let child = NSManagedObjectContext(concurrencyType: .PrivateQueueConcurrencyType)
@@ -121,7 +126,12 @@ public final class CoreDataOperation<Result>: NSOperation {
     }
 
     internal func executeInContext(context: NSManagedObjectContext) {
-        guard !cancelled else { return }
+        guard !cancelled else {
+            dispatch_async(dispatch_get_global_queue(qos_class_self(), 0)) {
+                self.finishWithError(CoreDataOperation.canceledError, result: nil)
+            }
+            return
+        }
 
         do {
 
@@ -157,20 +167,17 @@ public final class CoreDataOperation<Result>: NSOperation {
 
     }
 
-    override public func cancel() {
-        Log("\(self) cancelled.")
-        self.error = NSError(domain: NSCocoaErrorDomain, code: NSUserCancelledError, userInfo: nil)
-        super.cancel()
-    }
-
     internal func finishWithError(error: ErrorType?, result: Result?) {
         Log("\(self) did finish with error \(error), result \(result), ancestorError \(errorSavingAncestor).")
         self.result = result
         self.error = error
 
+        willChangeValueForKey("isExecuting")
         willChangeValueForKey("isFinished")
+        _executing.value = false
         _finished.value = true
         didChangeValueForKey("isFinished")
+        didChangeValueForKey("isExecuting")
     }
 
     // MARK: Static Helpers
@@ -186,7 +193,12 @@ public final class CoreDataOperation<Result>: NSOperation {
         }
 
         context.performBlock {
-            guard !canceled() else { return }
+            guard !canceled() else {
+                dispatch_async(dispatch_get_global_queue(QOS_CLASS_DEFAULT, 0)) {
+                    completion(nil)
+                }
+                return
+            }
 
             do {
                 Log("CoreDataOperation will save \(context)")
