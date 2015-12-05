@@ -307,5 +307,49 @@ class CoreDataOperationTests: XCTestCase {
         XCTAssertEqual(op.error as? NSError, NSError(domain: NSCocoaErrorDomain, code: NSUserCancelledError, userInfo: nil))
         XCTAssertNil(op.errorSavingAncestor)
     }
-    
+
+    func testThatOperationStatesAreCorrectForSuccessCase() {
+        var blockOp: NSOperation?
+        let op = CoreDataOperation<String>(targetContext: workingContext) { ctx in
+            XCTAssert(blockOp!.executing)
+            XCTAssert(!blockOp!.finished)
+            let e2 = NSEntityDescription.insertNewObjectForEntityForName("Employee", inManagedObjectContext: ctx) as! Employee
+            e2.name = "Silent Bob"
+            return "Example Result"
+        }
+        blockOp = op
+        let expectation = expectationWithDescription("Operation Completion")
+        op.completionBlock = {
+            XCTAssert(op.finished)
+            XCTAssert(!op.executing)
+            XCTAssertEqual(op.result, "Example Result")
+            XCTAssertNil(op.error)
+            XCTAssertNil(op.errorSavingAncestor)
+            expectation.fulfill()
+        }
+        queue.addOperation(op)
+        waitForExpectationsWithTimeout(1, handler: nil)
+    }
+
+    func testThatOperationStatesAreCorrectForFailureCase() {
+        var blockOp: NSOperation?
+        let op = CoreDataOperation<String>(targetContext: workingContext) { ctx in
+            XCTAssert(blockOp!.executing)
+            XCTAssert(!blockOp!.finished)
+            throw NSError(domain: NSCocoaErrorDomain, code: 1337, userInfo: nil)
+        }
+        blockOp = op
+        let expectation = expectationWithDescription("Operation Completion")
+        op.completionBlock = {
+            XCTAssert(op.finished)
+            XCTAssert(!op.executing)
+            XCTAssertNil(op.result)
+            XCTAssertEqual(op.error as? NSError, NSError(domain: NSCocoaErrorDomain, code: 1337, userInfo: nil))
+            XCTAssertNil(op.errorSavingAncestor)
+            expectation.fulfill()
+        }
+        queue.addOperation(op)
+        waitForExpectationsWithTimeout(1, handler: nil)
+    }
+
 }
