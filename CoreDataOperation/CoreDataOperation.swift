@@ -15,6 +15,13 @@ public enum CoreDataOperationSaveDepth: Int {
     case ScratchAndTargetContext = 1
     case ToPersistentStore = 100
 }
+/**
+The default value is `.ToPersistentStore`. This value is not thread-safe,
+so don't go changing it all over the place.
+
+FIXME: Make this static when static stored vars are supported on generics.
+*/
+public var CoreDataOperationDefaultSaveDepth: CoreDataOperationSaveDepth = .ToPersistentStore
 
 public final class CoreDataOperation<Result>: NSOperation {
 
@@ -70,12 +77,12 @@ public final class CoreDataOperation<Result>: NSOperation {
      * permanent object IDs for objects inserted during the operation body? The default
      * value is `true`.
      * Parameter saveDepth: How far up the hierarchy of managed object contexts should this operation
-     * save? The default value is `.ScratchAndTargetContext`.
+     * save? See `CoreDataOperationDefaultSaveDepth`.
      * Parameter body: The work to be done. The managed object context passed into this block
      * will be a private child context, owned by this operation, of the `targetContext`.
      * Note: You must work with objects in the provided context.
      */
-    public init(targetContext: NSManagedObjectContext, obtainPermanentObjectIDs: Bool = true, saveDepth: CoreDataOperationSaveDepth = .ScratchAndTargetContext, body: (NSManagedObjectContext) throws -> Result) {
+    public init(targetContext: NSManagedObjectContext, obtainPermanentObjectIDs: Bool = true, saveDepth: CoreDataOperationSaveDepth = CoreDataOperationDefaultSaveDepth, body: (NSManagedObjectContext) throws -> Result) {
         self.saveDepth = saveDepth
         self.obtainPermanentObjectIDs = obtainPermanentObjectIDs
         self.body = body
