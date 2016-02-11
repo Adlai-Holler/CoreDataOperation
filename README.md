@@ -1,5 +1,5 @@
 ## CoreDataOperation
-[![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)  [![Cocoapods compatible](https://img.shields.io/cocoapods/v/CoreDataOperation.svg)](https://cocoapods.org) [![Cocoapods compatible](https://img.shields.io/cocoapods/p/CoreDataOperation.svg)](https://cocoapods.org)
+[![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)  [![CocoaPods compatible](https://img.shields.io/cocoapods/v/CoreDataOperation.svg)](https://cocoapods.org) [![CocoaPods compatible](https://img.shields.io/cocoapods/p/CoreDataOperation.svg)](https://cocoapods.org)
 
 CoreDataOperation is a fast, safe, flexible operation for updating your core data models. It supports the latest Swift 2.1 syntax, and does all its work in a background managed object context.
 
