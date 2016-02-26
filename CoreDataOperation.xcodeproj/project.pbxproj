@@ -415,6 +415,7 @@
 				CC727D2A1C126A060040F5A2 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		CC727D2B1C126A060040F5A2 /* Build configuration list for PBXNativeTarget "CoreDataOperationTests" */ = {
 			isa = XCConfigurationList;
@@ -423,6 +424,7 @@
 				CC727D2D1C126A060040F5A2 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 
